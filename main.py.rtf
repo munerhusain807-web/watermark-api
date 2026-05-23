@@ -1,0 +1,45 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2868
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 from fastapi import FastAPI, UploadFile, File\
+from fastapi.middleware.cors import CORSMiddleware\
+from fastapi.responses import FileResponse\
+import subprocess, os, uuid\
+\
+app = FastAPI()\
+\
+app.add_middleware(\
+    CORSMiddleware,\
+    allow_origins=["*"],\
+    allow_methods=["*"],\
+    allow_headers=["*"],\
+)\
+\
+os.makedirs("uploads", exist_ok=True)\
+os.makedirs("outputs", exist_ok=True)\
+\
+@app.post("/upload-video")\
+async def upload_video(file: UploadFile = File(...)):\
+    filename = str(uuid.uuid4()) + ".mp4"\
+    input_path = f"uploads/\{filename\}"\
+    output_path = f"outputs/processed_\{filename\}"\
+\
+    with open(input_path, "wb") as f:\
+        f.write(await file.read())\
+\
+    subprocess.run([\
+        "ffmpeg", "-i", input_path,\
+        "-vf", "delogo=x=W-200:y=0:w=200:h=60:show=0",\
+        output_path\
+    ])\
+\
+    return \{"status": "done", "output": "processed_" + filename\}\
+\
+@app.get("/download/\{filename\}")\
+async def download(filename: str):\
+    path = f"outputs/\{filename\}"\
+    return FileResponse(path, media_type="video/mp4", filename=filename)}
